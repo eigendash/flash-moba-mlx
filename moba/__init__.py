@@ -15,6 +15,12 @@ from .blocks import (
     n_blocks,
     prefix_mean_within_block,
 )
+from .router import (
+    Router,
+    block_selection_mask,
+    token_selection_mask,
+    topk_blocks,
+)
 
 __all__ = [
     "block_centroids",
@@ -24,6 +30,10 @@ __all__ = [
     "causal_block_scores",
     "n_blocks",
     "prefix_mean_within_block",
+    "Router",
+    "block_selection_mask",
+    "token_selection_mask",
+    "topk_blocks",
 ]
 
 __version__ = "0.1.0"
