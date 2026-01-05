@@ -15,6 +15,14 @@ from .blocks import (
     n_blocks,
     prefix_mean_within_block,
 )
+from .attention import (
+    attention_mask_bias,
+    causal_token_mask,
+    dense_attention,
+    moba_attention,
+    moba_reference_attention,
+    selection_statistics,
+)
 from .router import (
     Router,
     block_selection_mask,
@@ -34,6 +42,12 @@ __all__ = [
     "block_selection_mask",
     "token_selection_mask",
     "topk_blocks",
+    "attention_mask_bias",
+    "causal_token_mask",
+    "dense_attention",
+    "moba_attention",
+    "moba_reference_attention",
+    "selection_statistics",
 ]
 
 __version__ = "0.1.0"
