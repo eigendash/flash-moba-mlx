@@ -23,6 +23,7 @@ from .attention import (
     moba_reference_attention,
     selection_statistics,
 )
+from .tiled import tiled_attention, tiled_attention_compiled
 from .router import (
     Router,
     block_selection_mask,
@@ -48,6 +49,8 @@ __all__ = [
     "moba_attention",
     "moba_reference_attention",
     "selection_statistics",
+    "tiled_attention",
+    "tiled_attention_compiled",
 ]
 
 __version__ = "0.1.0"
