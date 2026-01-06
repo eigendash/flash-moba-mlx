@@ -190,3 +190,33 @@ def test_selection_statistics_count_blocks_and_fraction():
     np.testing.assert_allclose(
         np.array(stats["fraction"]), [[2 / 3, 1 / 3]], atol=1e-6
     )
+
+
+@pytest.mark.parametrize("impl", ["reference", "tiled", "compiled", "metal"])
+def test_dispatch_agrees_across_implementations(impl):
+    from moba.attention import moba_attention
+
+    if impl == "metal" and not mx.metal.is_available():
+        pytest.skip("Metal is not available")
+    rng = np.random.default_rng(12)
+    length, block_size, k = 48, 8, 3
+    q = mx.array(rng.normal(size=(2, length, 8)).astype(np.float32))
+    keys = mx.array(rng.normal(size=(2, length, 8)).astype(np.float32))
+    v = mx.array(rng.normal(size=(2, length, 8)).astype(np.float32))
+    idx, sel, _ = Router(k=k, block_size=block_size)(q, keys)
+    got = np.array(moba_attention(q, keys, v, idx, sel, block_size, impl=impl))
+    want = np.array(
+        moba_attention(q, keys, v, idx, sel, block_size, impl="reference")
+    )
+    assert np.max(np.abs(got - want)) <= 1e-5
+
+
+def test_dispatch_rejects_an_unknown_implementation():
+    from moba.attention import moba_attention
+
+    q = mx.zeros((1, 8, 4))
+    with pytest.raises(ValueError):
+        moba_attention(
+            q, q, q, mx.zeros((1, 8, 1), mx.int32),
+            mx.ones((1, 8, 1), mx.bool_), 8, impl="nope",
+        )

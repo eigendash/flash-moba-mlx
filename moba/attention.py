@@ -95,11 +95,34 @@ def moba_attention(
     selected: mx.array,
     block_size: int,
     scale: float | None = None,
+    impl: str = "reference",
 ) -> mx.array:
-    """Alias for the reference path, kept for symmetry with the fast paths."""
-    return moba_reference_attention(
-        queries, keys, values, indices, selected, block_size, scale
-    )
+    """Dispatch across the four implementations of MoBA attention.
+
+    ``"reference"`` is the mask-based path above, ``"tiled"`` and ``"compiled"``
+    are the block-sparse online-softmax loop in :mod:`moba.tiled`, and ``"metal"``
+    is the GPU kernel in :mod:`moba.kernel`.  ``"dense"`` ignores the selection
+    and is only useful as a baseline.  All four agree to 1e-5 for a given
+    selection; the tests assert exactly that.
+    """
+    if impl == "reference":
+        return moba_reference_attention(
+            queries, keys, values, indices, selected, block_size, scale
+        )
+    if impl == "dense":
+        return dense_attention(queries, keys, values, scale)
+    if impl in ("tiled", "compiled"):
+        from .tiled import tiled_attention, tiled_attention_compiled
+
+        fn = tiled_attention if impl == "tiled" else tiled_attention_compiled
+        return fn(queries, keys, values, indices, selected, block_size, scale)
+    if impl == "metal":
+        from .kernel import metal_moba_attention
+
+        return metal_moba_attention(
+            queries, keys, values, indices, selected, block_size, scale
+        )
+    raise ValueError(f"unknown impl {impl!r}")
 
 
 def selection_statistics(

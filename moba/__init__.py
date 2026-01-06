@@ -23,6 +23,7 @@ from .attention import (
     moba_reference_attention,
     selection_statistics,
 )
+from .kernel import metal_available, metal_moba_attention
 from .tiled import tiled_attention, tiled_attention_compiled
 from .router import (
     Router,
@@ -51,6 +52,8 @@ __all__ = [
     "selection_statistics",
     "tiled_attention",
     "tiled_attention_compiled",
+    "metal_available",
+    "metal_moba_attention",
 ]
 
 __version__ = "0.1.0"
