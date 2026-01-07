@@ -23,6 +23,7 @@ from .attention import (
     moba_reference_attention,
     selection_statistics,
 )
+from .kconv import KeyConvolution, depthwise_causal_conv1d, silu
 from .kernel import metal_available, metal_moba_attention
 from .tiled import tiled_attention, tiled_attention_compiled
 from .router import (
@@ -54,6 +55,9 @@ __all__ = [
     "tiled_attention_compiled",
     "metal_available",
     "metal_moba_attention",
+    "KeyConvolution",
+    "depthwise_causal_conv1d",
+    "silu",
 ]
 
 __version__ = "0.1.0"
