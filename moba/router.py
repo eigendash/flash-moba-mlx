@@ -134,7 +134,14 @@ class Router:
             block_valid_mask(length, self.block_size), scores.shape
         )
         indices, selected = topk_blocks(scores, self.k, valid)
-        return indices, selected, scores
+        # The selection is a discrete decision: nothing is differentiable through
+        # argsort or through the resulting integer indices, and MLX would
+        # otherwise try to build a VJP for the integer gather in the tiled path.
+        return (
+            mx.stop_gradient(indices),
+            mx.stop_gradient(selected),
+            scores,
+        )
 
     def __repr__(self) -> str:  # pragma: no cover - cosmetic
         return (

@@ -24,6 +24,16 @@ from .attention import (
     selection_statistics,
 )
 from .kconv import KeyConvolution, depthwise_causal_conv1d, silu
+from .model import (
+    MLP,
+    Block,
+    MoBAAttention,
+    MoBALM,
+    ModelConfig,
+    answer_accuracy,
+    parameter_count,
+    routing_trace,
+)
 from .kernel import metal_available, metal_moba_attention
 from .tiled import tiled_attention, tiled_attention_compiled
 from .router import (
@@ -58,6 +68,14 @@ __all__ = [
     "KeyConvolution",
     "depthwise_causal_conv1d",
     "silu",
+    "MLP",
+    "Block",
+    "MoBAAttention",
+    "MoBALM",
+    "ModelConfig",
+    "answer_accuracy",
+    "parameter_count",
+    "routing_trace",
 ]
 
 __version__ = "0.1.0"
