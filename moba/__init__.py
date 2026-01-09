@@ -35,6 +35,7 @@ from .model import (
     routing_trace,
 )
 from .kernel import metal_available, metal_moba_attention
+from .task import TaskBatch, TaskConfig, generate_batch, held_out_batches, signal_block
 from .tiled import tiled_attention, tiled_attention_compiled
 from .router import (
     Router,
@@ -76,6 +77,11 @@ __all__ = [
     "answer_accuracy",
     "parameter_count",
     "routing_trace",
+    "TaskBatch",
+    "TaskConfig",
+    "generate_batch",
+    "held_out_batches",
+    "signal_block",
 ]
 
 __version__ = "0.1.0"
