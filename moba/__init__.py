@@ -24,6 +24,14 @@ from .attention import (
     selection_statistics,
 )
 from .kconv import KeyConvolution, depthwise_causal_conv1d, silu
+from .metrics import (
+    benchmark,
+    router_recall,
+    schedule_stats,
+    selection_matrix,
+    tile_utilisation,
+    traffic_stats,
+)
 from .model import (
     MLP,
     Block,
@@ -82,6 +90,12 @@ __all__ = [
     "generate_batch",
     "held_out_batches",
     "signal_block",
+    "benchmark",
+    "router_recall",
+    "schedule_stats",
+    "selection_matrix",
+    "tile_utilisation",
+    "traffic_stats",
 ]
 
 __version__ = "0.1.0"
