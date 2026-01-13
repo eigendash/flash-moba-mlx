@@ -40,6 +40,7 @@ class EvalResult:
     accuracy: float
     router_recall_all: float
     router_recall_answer: float
+    router_recall_first_layer: float
     loaded_fraction_of_dense: float
     loaded_fraction_of_all_blocks: float
     kv_bytes_fraction_of_dense: float
@@ -96,7 +97,7 @@ def evaluate(
         task, cfg.eval_batch_size, cfg.eval_batches, seed=cfg.eval_seed
     )
     losses, accuracies = [], []
-    recalls_all, recalls_answer = [], []
+    recalls_all, recalls_answer, recalls_first = [], [], []
     sparse_blocks = dense_blocks = 0.0
     query_positions = 0.0
     head_dim = model_cfg.head_dim
@@ -112,7 +113,9 @@ def evaluate(
         trace = []
         model(batch.tokens, trace=trace, impl=cfg.eval_impl)
         entry = trace[cfg.trace_layer]
-        mx.eval(entry["indices"], entry["selected"])
+        first = trace[0]
+        mx.eval(entry["indices"], entry["selected"],
+               first["indices"], first["selected"])
         signals = signal_blocks(batch)
         # Recall is scored per query slot, so run it once per query index.
         for i in range(signals.shape[1]):
@@ -123,6 +126,14 @@ def evaluate(
                 position=int(batch.answer_positions[i]),
             )
             recalls_answer.append(rec["recall"])
+            recalls_first.append(
+                router_recall(
+                    first["indices"],
+                    first["selected"],
+                    signals[:, i],
+                    position=int(batch.answer_positions[i]),
+                )["recall"]
+            )
         # Recall over every query position too, using the first query slot's
         # signal block: a cheap aggregate of "did the router look in the right
         # place anywhere in the sequence".
@@ -143,6 +154,7 @@ def evaluate(
         accuracy=float(np.mean(accuracies)),
         router_recall_all=float(np.mean(recalls_all)),
         router_recall_answer=float(np.mean(recalls_answer)),
+        router_recall_first_layer=float(np.mean(recalls_first)),
         loaded_fraction_of_dense=sparse_blocks / max(dense_blocks, 1e-30),
         loaded_fraction_of_all_blocks=(sparse_blocks / max(query_positions, 1.0))
         / (task.seq_len // task.block_size),

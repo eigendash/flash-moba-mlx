@@ -15,7 +15,8 @@ from dataclasses import dataclass
 import mlx.core as mx
 import mlx.nn as nn
 
-from .attention import moba_attention
+from .attention import attention_mask_bias, causal_token_mask, moba_attention
+from .blocks import block_valid_mask
 from .kconv import KeyConvolution
 from .router import Router
 
@@ -33,6 +34,10 @@ class ModelConfig:
     kconv_size: int = 0
     impl: str = "tiled"
     rope_base: float = 10000.0
+    # Weight of the auxiliary objective that trains the router (see
+    # MoBAAttention.router_loss).  The selection is discrete, so without it the
+    # router receives no gradient at all and stays at its initialisation.
+    router_distill: float = 0.0
 
     def __post_init__(self) -> None:
         if self.d_ff is None:
@@ -93,11 +98,45 @@ class MoBAAttention(nn.Module):
         h, d = self.cfg.n_heads, self.cfg.head_dim
         return mx.transpose(x.reshape(b, length, h, d), (0, 2, 1, 3))
 
+    def router_loss(self, queries: mx.array, keys: mx.array, scores: mx.array) -> mx.array:
+        """Cross-entropy that trains the router to follow the attention mass.
+
+        The top-k is discrete, so nothing in the forward pass depends on the
+        router's scores: ``stop_gradient`` on the indices is necessary for the
+        gather but it also removes the only path from the loss back to the
+        router.  A first version of this model trained a router that never left
+        its initialisation, and recall@k sat at chance for every k.
+
+        The fix is an auxiliary objective that costs one L x L softmax per layer
+        during training only.  The block mass ``sum_{s in block j} p(t, s)`` of
+        the *same* q and k under dense causal attention is a label-free target
+        for where the router ought to look, and the loss is the cross-entropy
+        between it and the router's softmax over candidate blocks.
+        """
+        length = queries.shape[-2]
+        block_size = self.cfg.block_size
+        count = length // block_size
+        scale = queries.shape[-1] ** -0.5
+        dense = mx.matmul(queries, mx.swapaxes(keys, -1, -2)) * scale
+        bias = attention_mask_bias(
+            causal_token_mask(length, length), dense.dtype
+        )
+        mass = mx.softmax(dense + bias, axis=-1)
+        mass = mx.reshape(mass, (*mass.shape[:-1], count, block_size))
+        target = mx.stop_gradient(mx.sum(mass, axis=-1))
+        valid = mx.broadcast_to(block_valid_mask(length, block_size), scores.shape)
+        log_probs = nn.log_softmax(mx.where(valid, scores, -mx.inf), axis=-1)
+        # 0 * -inf is NaN, and the target is exactly zero on non-candidate
+        # blocks, so the product has to be masked rather than multiplied.
+        terms = mx.where(valid, target * log_probs, mx.zeros_like(log_probs))
+        return -mx.mean(mx.sum(terms, axis=-1))
+
     def __call__(
         self,
         x: mx.array,
         trace: list | None = None,
         impl: str | None = None,
+        aux: dict | None = None,
     ) -> mx.array:
         b, length, _ = x.shape
         q = self._heads(self.q_proj(x))
@@ -108,6 +147,8 @@ class MoBAAttention(nn.Module):
         q = apply_rope(q, self.cfg.rope_base)
         k = apply_rope(k, self.cfg.rope_base)
         indices, selected, scores = self.router(q, k)
+        if aux is not None and self.cfg.router_distill > 0:
+            aux["router"] = aux.get("router", 0.0) + self.router_loss(q, k, scores)
         out = moba_attention(
             q,
             k,
@@ -148,8 +189,8 @@ class Block(nn.Module):
         self.norm2 = nn.RMSNorm(cfg.d_model)
         self.mlp = MLP(cfg)
 
-    def __call__(self, x, trace=None, impl=None):
-        x = x + self.attn(self.norm1(x), trace=trace, impl=impl)
+    def __call__(self, x, trace=None, impl=None, aux=None):
+        x = x + self.attn(self.norm1(x), trace=trace, impl=impl, aux=aux)
         return x + self.mlp(self.norm2(x))
 
 
@@ -169,6 +210,7 @@ class MoBALM(nn.Module):
         tokens: mx.array,
         trace: list | None = None,
         impl: str | None = None,
+        aux: dict | None = None,
     ) -> mx.array:
         _, length = tokens.shape
         if length > self.cfg.max_seq_len:
@@ -178,7 +220,7 @@ class MoBALM(nn.Module):
             )
         h = self.token_emb(tokens)
         for block in self.blocks:
-            h = block(h, trace=trace, impl=impl)
+            h = block(h, trace=trace, impl=impl, aux=aux)
         return self.lm_head(self.norm(h))
 
     def loss(
@@ -195,16 +237,21 @@ class MoBALM(nn.Module):
         answer-only objective is expressed; without it the loss is the ordinary
         next-token loss over the whole sequence.
         """
-        logits = self(tokens, trace=trace, impl=impl)
+        aux: dict = {}
+        logits = self(tokens, trace=trace, impl=impl, aux=aux)
         log_probs = nn.log_softmax(logits, axis=-1)
         picked = mx.take_along_axis(
             log_probs, targets[..., None], axis=-1
         )[..., 0]
         nll = -picked
         if mask is None:
-            return nll.mean()
-        weights = mask.astype(mx.float32)
-        return mx.sum(nll * weights) / mx.maximum(mx.sum(weights), 1.0)
+            task_loss = nll.mean()
+        else:
+            weights = mask.astype(mx.float32)
+            task_loss = mx.sum(nll * weights) / mx.maximum(mx.sum(weights), 1.0)
+        if self.cfg.router_distill > 0 and "router" in aux:
+            return task_loss + self.cfg.router_distill * aux["router"] / len(self.blocks)
+        return task_loss
 
 
 def parameter_count(model) -> int:
