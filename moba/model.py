@@ -1,8 +1,8 @@
 """A small causal decoder-only LM whose attention layers are MoBA layers.
 
-Toy scale on purpose: a few hundred thousand parameters, learned positional
-embeddings (not RoPE), an ordinary GELU MLP, and one block-sparse attention layer
-per block.  The router is per head and reuses that head's attention query, so it
+Toy scale on purpose: a few hundred thousand parameters, rotary positions on the
+queries and keys, an ordinary GELU MLP, and one block-sparse attention layer per
+block.  The router is per head and reuses that head's attention query, so it
 scores block centroids of exactly the keys the attention head will read -- which
 is what Section 2 of arXiv:2511.11571 describes and what the paper's Section 3
 statistical model then analyses.
@@ -32,6 +32,7 @@ class ModelConfig:
     k: int = 2
     kconv_size: int = 0
     impl: str = "tiled"
+    rope_base: float = 10000.0
 
     def __post_init__(self) -> None:
         if self.d_ff is None:
@@ -46,6 +47,27 @@ class ModelConfig:
     @property
     def head_dim(self) -> int:
         return self.d_model // self.n_heads
+
+
+def apply_rope(x: mx.array, base: float = 10000.0, offset: int = 0) -> mx.array:
+    """Rotary positions on ``(..., L, d)``.
+
+    Absolute learned positions cannot express "attend to the previous token": the
+    score between two positions would be ``p_t^T W p_{t-1}``, which no single
+    bilinear form can make uniformly large.  The multi-key recall task needs
+    exactly that shift head, so positions are rotary here, as in the paper's base
+    model.
+    """
+    if x.shape[-1] % 2:
+        raise ValueError("RoPE needs an even head dimension")
+    return mx.fast.rope(
+        x,
+        dims=x.shape[-1],
+        traditional=False,
+        base=base,
+        scale=1.0,
+        offset=offset,
+    )
 
 
 class MoBAAttention(nn.Module):
@@ -83,6 +105,8 @@ class MoBAAttention(nn.Module):
         v = self._heads(self.v_proj(x))
         if self.key_conv is not None:
             k = self.key_conv(k)
+        q = apply_rope(q, self.cfg.rope_base)
+        k = apply_rope(k, self.cfg.rope_base)
         indices, selected, scores = self.router(q, k)
         out = moba_attention(
             q,
@@ -136,7 +160,6 @@ class MoBALM(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.token_emb = nn.Embedding(cfg.vocab_size, cfg.d_model)
-        self.pos_emb = nn.Embedding(cfg.max_seq_len, cfg.d_model)
         self.blocks = [Block(cfg) for _ in range(cfg.n_layers)]
         self.norm = nn.RMSNorm(cfg.d_model)
         self.lm_head = nn.Linear(cfg.d_model, cfg.vocab_size, bias=False)
@@ -153,7 +176,7 @@ class MoBALM(nn.Module):
                 f"sequence length {length} exceeds max_seq_len "
                 f"{self.cfg.max_seq_len}"
             )
-        h = self.token_emb(tokens) + self.pos_emb(mx.arange(length))[None]
+        h = self.token_emb(tokens)
         for block in self.blocks:
             h = block(h, trace=trace, impl=impl)
         return self.lm_head(self.norm(h))

@@ -1,28 +1,35 @@
 """Multi-key associative recall with long filler: a task where selection matters.
 
 The sequence is cut into blocks.  A handful of *pair blocks* each start with a
-``(key, value)`` binding; the value's token position is the key's position plus
-one, so both live in the same block.  Every other position is filler or a random
-*noise key* drawn from the key vocabulary.  The last block carries the query: its
-final token is a copy of one of the keys, and the model has to emit the value bound
-to it at that same position.
+``(key, value)`` binding; the value sits immediately after its key so both live in
+the same block.  Every other position is filler or a random *noise key* drawn from
+the key vocabulary.  The tail of the sequence is the query region: the last
+``n_queries`` positions are copies of keys that were bound earlier, and at each of
+those positions the target is the value bound to that key.  The query key is the
+input token there, so the router at that position sees the key identity directly
+instead of having to recover it from a preceding token.
 
-Two properties make the router the interesting part:
+Three properties make the router the interesting part:
 
 * the query key is one key among ``B`` inside its block, so the signal is diluted
   by ``1/B`` in the block centroid -- exactly the ``Delta_mu_eff / B`` term of the
-  paper's Eq. 1, which is why the task suits the SNR analysis;
-* the answer requires selecting the *pair block* that holds the matching key out
-  of ``K`` candidates, roughly ``K - 1`` of which contain unrelated keys.  With
-  ``k = 1`` the model must pick exactly one block and be right.
+  paper's Eq. 1, which is why this task suits the SNR analysis;
+* answering requires selecting the *pair block* that holds the matching key out of
+  ``K`` candidates, roughly ``K - 1`` of which contain unrelated keys, and with
+  ``k = 1`` the model must pick exactly one block and be right.  The scorer at a
+  query position is the key token itself, so a layer-0 router can decide where to
+  look from the token alone; what still has to be learned is the two-hop
+  induction circuit that turns "I found the key" into "read the token after it";
+* supervision happens at ``n_queries`` positions per sequence rather than one, so
+  a few hundred steps are enough to see the effect of ``k``.
 
 Everything is generated with NumPy for reproducibility and returned as MLX
-arrays.  ``mask`` selects the final position, which is the only one scored.
+arrays.  ``mask`` selects the query positions, the only ones scored by default.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import mlx.core as mx
 import numpy as np
@@ -30,25 +37,34 @@ import numpy as np
 
 @dataclass
 class TaskConfig:
-    seq_len: int = 256
+    seq_len: int = 128
     block_size: int = 16
-    n_pairs: int = 3
+    n_pairs: int = 6
+    n_queries: int = 4
     n_filler: int = 16
     n_keys: int = 32
-    n_values: int = 32
-    noise_key_rate: float = 0.5
+    n_values: int = 16
+    noise_key_rate: float = 0.4
+    noise_value_rate: float = 0.0
 
     def __post_init__(self) -> None:
         if self.seq_len % self.block_size:
             raise ValueError("seq_len must be a multiple of block_size")
-        if self.n_blocks < self.n_pairs + 2:
+        if self.n_pairs > self.n_blocks - 2:
             raise ValueError(
                 f"need at least {self.n_pairs + 2} blocks, have {self.n_blocks}"
             )
-        if self.n_keys < self.n_pairs + 1:
-            raise ValueError("need more key types than pairs")
+        if self.n_queries < 1 or self.n_queries > self.n_pairs:
+            raise ValueError("need 1 <= n_queries <= n_pairs")
+        if self.n_keys < self.n_pairs:
+            raise ValueError("need at least as many key types as pairs")
         if self.n_values < self.n_pairs:
-            raise ValueError("need at least one value per pair")
+            raise ValueError("need at least as many values as pairs")
+        if self.n_queries >= self.block_size:
+            raise ValueError(
+                "the query region must fit inside the final block; reduce "
+                "n_queries or increase block_size"
+            )
 
     @property
     def n_blocks(self) -> int:
@@ -70,6 +86,13 @@ class TaskConfig:
     def vocab_size(self) -> int:
         return self.n_filler + self.n_keys + self.n_values
 
+    @property
+    def answer_positions(self) -> np.ndarray:
+        """Positions of the query keys, in query order."""
+        return (self.seq_len - self.n_queries + np.arange(self.n_queries)).astype(
+            np.int64
+        )
+
 
 @dataclass
 class TaskBatch:
@@ -77,12 +100,17 @@ class TaskBatch:
     targets: mx.array
     mask: mx.array
     pair_blocks: np.ndarray
-    target_pair: np.ndarray
+    query_pair: np.ndarray
     answer: np.ndarray
     query_key: np.ndarray
+    answer_positions: np.ndarray = field(default_factory=lambda: np.zeros(0, np.int64))
 
     def __len__(self) -> int:
         return int(self.tokens.shape[0])
+
+    @property
+    def n_queries(self) -> int:
+        return int(self.answer_positions.shape[0])
 
     @property
     def answer_position(self) -> int:
@@ -94,9 +122,10 @@ class TaskBatch:
             "targets": np.array(self.targets),
             "mask": np.array(self.mask),
             "pair_blocks": self.pair_blocks,
-            "target_pair": self.target_pair,
+            "query_pair": self.query_pair,
             "answer": self.answer,
             "query_key": self.query_key,
+            "answer_positions": self.answer_positions,
         }
 
 
@@ -111,74 +140,94 @@ def generate_batch(
     low_filler, high_filler = cfg.filler_ids
     low_key, high_key = cfg.key_ids
     low_value, high_value = cfg.value_ids
+    key_slots = np.arange(low_key, high_key)
+    answer_positions = cfg.answer_positions
 
-    tokens = rng.integers(low_filler, high_filler, size=(batch_size, length))
-    # Noise keys sprinkled through the filler: these are the distractor signals
-    # the router has to outrank when it scores a block centroid.
-    noise = rng.random((batch_size, length)) < cfg.noise_key_rate
-    tokens = np.where(
-        noise, rng.integers(low_key, high_key, size=(batch_size, length)), tokens
-    ).astype(np.int32)
-    horizon = np.arange(length, dtype=np.int32)
-
+    tokens = np.zeros((batch_size, length), np.int32)
     targets = np.zeros((batch_size, length), np.int32)
     pair_blocks = np.zeros((batch_size, cfg.n_pairs), np.int32)
-    target_pair = np.zeros((batch_size,), np.int32)
-    answer = np.zeros((batch_size,), np.int32)
-    query_key = np.zeros((batch_size,), np.int32)
+    query_pair = np.zeros((batch_size, cfg.n_queries), np.int32)
+    answer = np.zeros((batch_size, cfg.n_queries), np.int32)
+    query_key = np.zeros((batch_size, cfg.n_queries), np.int32)
 
-    # Candidate pair blocks exclude block 0 and the query block.
+    # Block 0 is filler and the last block carries the queries.
     candidates = np.arange(1, n_blocks - 1)
-    key_slots = np.arange(low_key, high_key)
-
     for b in range(batch_size):
-        chosen = rng.choice(candidates, size=cfg.n_pairs, replace=False)
-        chosen.sort()
+        chosen = np.sort(rng.choice(candidates, size=cfg.n_pairs, replace=False))
         pair_blocks[b] = chosen
-        keys = rng.choice(key_slots, size=cfg.n_pairs + 1, replace=False)
-        query_key[b] = keys[0]
+        keys = rng.choice(key_slots, size=cfg.n_pairs, replace=False)
         values = rng.choice(
             np.arange(low_value, high_value), size=cfg.n_pairs, replace=False
         )
-        which = int(rng.integers(0, cfg.n_pairs))
-        target_pair[b] = which
-        answer[b] = values[which]
+        # Noise keys are drawn only from keys that hold no binding in this row.
+        # Otherwise a distractor can repeat a binding key, the same key then
+        # points at two different values, and the task is ambiguous rather than
+        # hard -- which is exactly what a first attempt at this generator did.
+        allowed = key_slots[~np.isin(key_slots, keys)]
+        if allowed.size == 0:
+            raise ValueError("not enough key types to fill the noise positions")
+        row = rng.integers(low_filler, high_filler, size=length)
+        noise = rng.random(length) < cfg.noise_key_rate
+        row = np.where(noise, rng.choice(allowed, size=length), row).astype(np.int32)
+        if cfg.noise_value_rate > 0:
+            # Value tokens sprinkled through the filler too.  Without this the
+            # task can be solved by narrowing to the values that appear in the
+            # sequence, which caps accuracy at 1 / n_pairs without any retrieval.
+            value_noise = rng.random(length) < cfg.noise_value_rate
+            row = np.where(
+                value_noise,
+                rng.integers(low_value, high_value, size=length),
+                row,
+            ).astype(np.int32)
         for p in range(cfg.n_pairs):
             start = int(chosen[p]) * block
-            key = int(keys[0] if p == which else keys[p + 1])
-            tokens[b, start] = key
-            tokens[b, start + 1] = values[p]
-            # The rest of the pair block is filler plus distractor keys.  The
-            # pair's own key is excluded so that the binding stays unique.
+            row[start] = keys[p]
+            row[start + 1] = values[p]
+            # The rest of the pair block is filler plus distractor keys.
             rest = np.arange(start + 2, start + block)
             if rest.size:
-                allowed = key_slots[key_slots != key]
                 distract = rng.random(rest.size) < cfg.noise_key_rate
-                extra_keys = rng.choice(allowed, size=rest.size, replace=True)
-                tokens[b, rest] = np.where(
+                row[rest] = np.where(
                     distract,
-                    extra_keys,
+                    rng.choice(allowed, size=rest.size),
                     rng.integers(low_filler, high_filler, size=rest.size),
                 )
-        # The query: the key again, as the last token of the sequence.
-        tokens[b, length - 1] = query_key[b]
-        targets[b, length - 1] = answer[b]
+                if cfg.noise_value_rate > 0:
+                    value_noise = rng.random(rest.size) < cfg.noise_value_rate
+                    row[rest] = np.where(
+                        value_noise,
+                        rng.integers(low_value, high_value, size=rest.size),
+                        row[rest],
+                    ).astype(np.int32)
+        asked = rng.choice(cfg.n_pairs, size=cfg.n_queries, replace=False)
+        query_pair[b] = asked
+        for i, p in enumerate(asked):
+            pos = int(answer_positions[i])
+            row[pos] = keys[p]
+            query_key[b, i] = keys[p]
+            answer[b, i] = values[p]
+            targets[b, pos] = values[p]
+        tokens[b] = row
 
     mask = np.zeros((batch_size, length), np.float32)
-    mask[:, length - 1] = 1.0
-    # Next-token targets everywhere, with the last position replaced by the
-    # retrieved value.  Only the last position is scored by the experiments.
+    mask[:, answer_positions] = 1.0
+    # Next-token targets everywhere, with the answer slots replaced by the
+    # retrieved values.  The experiments score the answer slots only.
     shifted = np.concatenate([tokens[:, 1:], tokens[:, -1:]], axis=1)
-    targets = np.where(horizon[None] == length - 1, targets, shifted)
+    horizon = np.arange(length)
+    targets = np.where(
+        np.isin(horizon, answer_positions)[None], targets, shifted
+    )
 
     return TaskBatch(
         tokens=mx.array(tokens.astype(np.int32)),
         targets=mx.array(targets.astype(np.int32)),
         mask=mx.array(mask),
         pair_blocks=pair_blocks,
-        target_pair=target_pair,
+        query_pair=query_pair,
         answer=answer.astype(np.int32),
         query_key=query_key.astype(np.int32),
+        answer_positions=answer_positions,
     )
 
 
@@ -193,7 +242,11 @@ def held_out_batches(
     return [generate_batch(cfg, batch_size, rng) for _ in range(n_batches)]
 
 
+def signal_blocks(batch: TaskBatch) -> np.ndarray:
+    """``(B, n_queries)`` block indices holding each query's key/value binding."""
+    return batch.pair_blocks[np.arange(len(batch))[:, None], batch.query_pair]
+
+
 def signal_block(batch: TaskBatch, row: int | None = None) -> np.ndarray:
-    """Block indices holding the answer key/value binding, shape ``(B,)``."""
-    rows = np.arange(len(batch)) if row is None else np.asarray([row])
-    return batch.pair_blocks[rows, batch.target_pair[rows]]
+    """Backwards-compatible alias: the first query's signal block per row."""
+    return signal_blocks(batch)[:, 0] if row is None else signal_blocks(batch)[row]

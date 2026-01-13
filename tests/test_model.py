@@ -97,12 +97,14 @@ def test_a_single_layer_model_matches_manual_block_sparse_attention():
     got = np.array(model(tokens, trace=trace, impl="reference"))
     entry = trace[0]
     # Rebuild the same forward pass outside the model.
-    x = model.token_emb(tokens) + model.pos_emb(mx.arange(16))[None]
+    x = model.token_emb(tokens)
     block = model.blocks[0]
     h = block.norm1(x)
     attn = block.attn
-    q = attn._heads(attn.q_proj(h))
-    k = attn._heads(attn.k_proj(h))
+    from moba.model import apply_rope
+
+    q = apply_rope(attn._heads(attn.q_proj(h)))
+    k = apply_rope(attn._heads(attn.k_proj(h)))
     v = attn._heads(attn.v_proj(h))
     out = dense_attention(q, k, v)
     from moba.attention import moba_reference_attention

@@ -43,8 +43,22 @@ from .model import (
     routing_trace,
 )
 from .kernel import metal_available, metal_moba_attention
-from .task import TaskBatch, TaskConfig, generate_batch, held_out_batches, signal_block
+from .task import (
+    TaskBatch,
+    TaskConfig,
+    generate_batch,
+    held_out_batches,
+    signal_block,
+    signal_blocks,
+)
 from .tiled import tiled_attention, tiled_attention_compiled
+from .snr import (
+    measure_router_snr,
+    predicted_failure_rate,
+    predicted_snr,
+    snr_scaling_table,
+)
+from .train import EvalResult, TrainConfig, evaluate, make_model, train
 from .router import (
     Router,
     block_selection_mask,
@@ -90,12 +104,22 @@ __all__ = [
     "generate_batch",
     "held_out_batches",
     "signal_block",
+    "signal_blocks",
     "benchmark",
     "router_recall",
     "schedule_stats",
     "selection_matrix",
     "tile_utilisation",
     "traffic_stats",
+    "EvalResult",
+    "TrainConfig",
+    "evaluate",
+    "make_model",
+    "train",
+    "measure_router_snr",
+    "predicted_failure_rate",
+    "predicted_snr",
+    "snr_scaling_table",
 ]
 
 __version__ = "0.1.0"
