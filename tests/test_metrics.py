@@ -110,7 +110,8 @@ def test_traffic_scales_with_the_number_of_heads_and_batches():
 
 def test_router_recall_is_one_when_the_signal_block_is_selected():
     cfg = TaskConfig(
-        seq_len=64, block_size=8, n_pairs=2, n_filler=8, n_keys=16, n_values=16
+        seq_len=64, block_size=8, n_pairs=2, n_queries=1, n_filler=8,
+        n_keys=16, n_values=16,
     )
     batch = generate_batch(cfg, 4, np.random.default_rng(0))
     signal = signal_block(batch)
@@ -124,7 +125,8 @@ def test_router_recall_is_one_when_the_signal_block_is_selected():
 
 def test_router_recall_is_zero_when_the_signal_block_is_never_selected():
     cfg = TaskConfig(
-        seq_len=64, block_size=8, n_pairs=2, n_filler=8, n_keys=16, n_values=16
+        seq_len=64, block_size=8, n_pairs=2, n_queries=1, n_filler=8,
+        n_keys=16, n_values=16,
     )
     batch = generate_batch(cfg, 4, np.random.default_rng(1))
     signal = signal_block(batch)
@@ -138,7 +140,8 @@ def test_router_recall_is_zero_when_the_signal_block_is_never_selected():
 
 def test_router_recall_reports_per_head_and_row_counts():
     cfg = TaskConfig(
-        seq_len=32, block_size=8, n_pairs=1, n_filler=8, n_keys=8, n_values=8
+        seq_len=32, block_size=8, n_pairs=1, n_queries=1, n_filler=8,
+        n_keys=8, n_values=8,
     )
     batch = generate_batch(cfg, 2, np.random.default_rng(2))
     signal = signal_block(batch)
