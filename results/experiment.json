@@ -1,0 +1,601 @@
+{
+  "task": {
+    "seq_len": 128,
+    "block_size": 16,
+    "n_pairs": 2,
+    "n_queries": 2,
+    "n_filler": 16,
+    "n_keys": 64,
+    "n_values": 16,
+    "noise_key_rate": 0.4,
+    "noise_value_rate": 0.0
+  },
+  "model": {
+    "d_model": 64,
+    "n_heads": 4,
+    "n_layers": 3,
+    "d_ff": 256,
+    "block_size": 16,
+    "kconv_size": 5
+  },
+  "parameters": 160192,
+  "train_cfg": {
+    "steps": 4000,
+    "batch_size": 16,
+    "learning_rate": 0.001,
+    "weight_decay": 0.01,
+    "seed": 0,
+    "eval_batches": 4,
+    "eval_batch_size": 32,
+    "eval_seed": 999,
+    "trace_layer": -1,
+    "eval_impl": "reference",
+    "train_impl": "tiled"
+  },
+  "seeds": [
+    0,
+    1
+  ],
+  "k_sweep": {
+    "1": {
+      "n": 2,
+      "loss": 0.8926979973912239,
+      "loss_std": 0.05799677222967148,
+      "loss_values": [
+        0.8347012251615524,
+        0.9506947696208954
+      ],
+      "accuracy": 0.470703125,
+      "accuracy_std": 0.005859375,
+      "accuracy_values": [
+        0.46484375,
+        0.4765625
+      ],
+      "router_recall_all": 0.1955413818359375,
+      "router_recall_all_std": 0.019866943359375,
+      "router_recall_all_values": [
+        0.2154083251953125,
+        0.1756744384765625
+      ],
+      "router_recall_answer": 0.27392578125,
+      "router_recall_answer_std": 0.00830078125,
+      "router_recall_answer_values": [
+        0.265625,
+        0.2822265625
+      ],
+      "router_recall_first_layer": 0.1630859375,
+      "router_recall_first_layer_std": 0.017578125,
+      "router_recall_first_layer_values": [
+        0.1806640625,
+        0.1455078125
+      ],
+      "loaded_fraction_of_dense": 0.2222222222222222,
+      "loaded_fraction_of_dense_std": 0.0,
+      "loaded_fraction_of_dense_values": [
+        0.2222222222222222,
+        0.2222222222222222
+      ],
+      "loaded_fraction_of_all_blocks": 0.125,
+      "loaded_fraction_of_all_blocks_std": 0.0,
+      "loaded_fraction_of_all_blocks_values": [
+        0.125,
+        0.125
+      ],
+      "kv_bytes_fraction_of_dense": 0.2222222222222222,
+      "kv_bytes_fraction_of_dense_std": 0.0,
+      "kv_bytes_fraction_of_dense_values": [
+        0.2222222222222222,
+        0.2222222222222222
+      ],
+      "blocks_per_query": 1.0,
+      "blocks_per_query_std": 0.0,
+      "blocks_per_query_values": [
+        1.0,
+        1.0
+      ],
+      "train_seconds": 96.35329210397322,
+      "train_seconds_std": 0.13355535396840423,
+      "train_seconds_values": [
+        96.21973675000481,
+        96.48684745794162
+      ],
+      "k": 1
+    },
+    "2": {
+      "n": 2,
+      "loss": 0.7993715777993202,
+      "loss_std": 0.013597212731838226,
+      "loss_values": [
+        0.785774365067482,
+        0.8129687905311584
+      ],
+      "accuracy": 0.501953125,
+      "accuracy_std": 0.005859375,
+      "accuracy_values": [
+        0.49609375,
+        0.5078125
+      ],
+      "router_recall_all": 0.22475433349609375,
+      "router_recall_all_std": 0.05600738525390625,
+      "router_recall_all_values": [
+        0.28076171875,
+        0.1687469482421875
+      ],
+      "router_recall_answer": 0.26416015625,
+      "router_recall_answer_std": 0.02685546875,
+      "router_recall_answer_values": [
+        0.291015625,
+        0.2373046875
+      ],
+      "router_recall_first_layer": 0.30419921875,
+      "router_recall_first_layer_std": 0.01025390625,
+      "router_recall_first_layer_values": [
+        0.2939453125,
+        0.314453125
+      ],
+      "loaded_fraction_of_dense": 0.4166666666666667,
+      "loaded_fraction_of_dense_std": 0.0,
+      "loaded_fraction_of_dense_values": [
+        0.4166666666666667,
+        0.4166666666666667
+      ],
+      "loaded_fraction_of_all_blocks": 0.234375,
+      "loaded_fraction_of_all_blocks_std": 0.0,
+      "loaded_fraction_of_all_blocks_values": [
+        0.234375,
+        0.234375
+      ],
+      "kv_bytes_fraction_of_dense": 0.4166666666666667,
+      "kv_bytes_fraction_of_dense_std": 0.0,
+      "kv_bytes_fraction_of_dense_values": [
+        0.4166666666666667,
+        0.4166666666666667
+      ],
+      "blocks_per_query": 1.875,
+      "blocks_per_query_std": 0.0,
+      "blocks_per_query_values": [
+        1.875,
+        1.875
+      ],
+      "train_seconds": 125.66703220794443,
+      "train_seconds_std": 0.17712154204491526,
+      "train_seconds_values": [
+        125.48991066589952,
+        125.84415374998935
+      ],
+      "k": 2
+    },
+    "4": {
+      "n": 2,
+      "loss": 0.7731295078992844,
+      "loss_std": 0.007162794470787048,
+      "loss_values": [
+        0.7802923023700714,
+        0.7659667134284973
+      ],
+      "accuracy": 0.484375,
+      "accuracy_std": 0.0078125,
+      "accuracy_values": [
+        0.4921875,
+        0.4765625
+      ],
+      "router_recall_all": 0.42786407470703125,
+      "router_recall_all_std": 0.04106903076171875,
+      "router_recall_all_values": [
+        0.3867950439453125,
+        0.46893310546875
+      ],
+      "router_recall_answer": 0.54931640625,
+      "router_recall_answer_std": 0.05224609375,
+      "router_recall_answer_values": [
+        0.4970703125,
+        0.6015625
+      ],
+      "router_recall_first_layer": 0.6162109375,
+      "router_recall_first_layer_std": 0.0048828125,
+      "router_recall_first_layer_values": [
+        0.62109375,
+        0.611328125
+      ],
+      "loaded_fraction_of_dense": 0.7222222222222222,
+      "loaded_fraction_of_dense_std": 0.0,
+      "loaded_fraction_of_dense_values": [
+        0.7222222222222222,
+        0.7222222222222222
+      ],
+      "loaded_fraction_of_all_blocks": 0.40625,
+      "loaded_fraction_of_all_blocks_std": 0.0,
+      "loaded_fraction_of_all_blocks_values": [
+        0.40625,
+        0.40625
+      ],
+      "kv_bytes_fraction_of_dense": 0.7222222222222222,
+      "kv_bytes_fraction_of_dense_std": 0.0,
+      "kv_bytes_fraction_of_dense_values": [
+        0.7222222222222222,
+        0.7222222222222222
+      ],
+      "blocks_per_query": 3.25,
+      "blocks_per_query_std": 0.0,
+      "blocks_per_query_values": [
+        3.25,
+        3.25
+      ],
+      "train_seconds": 222.14216797903646,
+      "train_seconds_std": 0.5842275210889056,
+      "train_seconds_values": [
+        221.55794045794755,
+        222.72639550012536
+      ],
+      "k": 4
+    },
+    "8": {
+      "n": 2,
+      "loss": 0.7704461291432381,
+      "loss_std": 0.00895170122385025,
+      "loss_values": [
+        0.7614944279193878,
+        0.7793978303670883
+      ],
+      "accuracy": 0.5,
+      "accuracy_std": 0.015625,
+      "accuracy_values": [
+        0.515625,
+        0.484375
+      ],
+      "router_recall_all": 0.5693359375,
+      "router_recall_all_std": 0.0,
+      "router_recall_all_values": [
+        0.5693359375,
+        0.5693359375
+      ],
+      "router_recall_answer": 1.0,
+      "router_recall_answer_std": 0.0,
+      "router_recall_answer_values": [
+        1.0,
+        1.0
+      ],
+      "router_recall_first_layer": 1.0,
+      "router_recall_first_layer_std": 0.0,
+      "router_recall_first_layer_values": [
+        1.0,
+        1.0
+      ],
+      "loaded_fraction_of_dense": 1.0,
+      "loaded_fraction_of_dense_std": 0.0,
+      "loaded_fraction_of_dense_values": [
+        1.0,
+        1.0
+      ],
+      "loaded_fraction_of_all_blocks": 0.5625,
+      "loaded_fraction_of_all_blocks_std": 0.0,
+      "loaded_fraction_of_all_blocks_values": [
+        0.5625,
+        0.5625
+      ],
+      "kv_bytes_fraction_of_dense": 1.0,
+      "kv_bytes_fraction_of_dense_std": 0.0,
+      "kv_bytes_fraction_of_dense_values": [
+        1.0,
+        1.0
+      ],
+      "blocks_per_query": 4.5,
+      "blocks_per_query_std": 0.0,
+      "blocks_per_query_values": [
+        4.5,
+        4.5
+      ],
+      "train_seconds": 281.6720414374722,
+      "train_seconds_std": 0.06563981238286942,
+      "train_seconds_values": [
+        281.60640162508935,
+        281.7376812498551
+      ],
+      "k": 8
+    }
+  },
+  "dense_baseline": {
+    "n": 2,
+    "loss": 0.7704461291432381,
+    "loss_std": 0.00895170122385025,
+    "loss_values": [
+      0.7614944279193878,
+      0.7793978303670883
+    ],
+    "accuracy": 0.5,
+    "accuracy_std": 0.015625,
+    "accuracy_values": [
+      0.515625,
+      0.484375
+    ],
+    "router_recall_all": 0.5693359375,
+    "router_recall_all_std": 0.0,
+    "router_recall_all_values": [
+      0.5693359375,
+      0.5693359375
+    ],
+    "router_recall_answer": 1.0,
+    "router_recall_answer_std": 0.0,
+    "router_recall_answer_values": [
+      1.0,
+      1.0
+    ],
+    "router_recall_first_layer": 1.0,
+    "router_recall_first_layer_std": 0.0,
+    "router_recall_first_layer_values": [
+      1.0,
+      1.0
+    ],
+    "loaded_fraction_of_dense": 1.0,
+    "loaded_fraction_of_dense_std": 0.0,
+    "loaded_fraction_of_dense_values": [
+      1.0,
+      1.0
+    ],
+    "loaded_fraction_of_all_blocks": 0.5625,
+    "loaded_fraction_of_all_blocks_std": 0.0,
+    "loaded_fraction_of_all_blocks_values": [
+      0.5625,
+      0.5625
+    ],
+    "kv_bytes_fraction_of_dense": 1.0,
+    "kv_bytes_fraction_of_dense_std": 0.0,
+    "kv_bytes_fraction_of_dense_values": [
+      1.0,
+      1.0
+    ],
+    "blocks_per_query": 4.5,
+    "blocks_per_query_std": 0.0,
+    "blocks_per_query_values": [
+      4.5,
+      4.5
+    ],
+    "train_seconds": 281.6720414374722,
+    "train_seconds_std": 0.06563981238286942,
+    "train_seconds_values": [
+      281.60640162508935,
+      281.7376812498551
+    ],
+    "k": 8
+  },
+  "dense_equivalence": {
+    "max_abs_diff": 1.1324882507324219e-06,
+    "batches": 3,
+    "note": "untrained weights; the identity is checked on random routing too"
+  },
+  "traffic": [
+    {
+      "k": 1,
+      "loaded_blocks": 8192.0,
+      "dense_blocks": 36864.0,
+      "loaded_fraction_of_dense": 0.2222222222222222,
+      "loaded_fraction_of_all_blocks": 0.125
+    },
+    {
+      "k": 2,
+      "loaded_blocks": 15360.0,
+      "dense_blocks": 36864.0,
+      "loaded_fraction_of_dense": 0.4166666666666667,
+      "loaded_fraction_of_all_blocks": 0.234375
+    },
+    {
+      "k": 4,
+      "loaded_blocks": 26624.0,
+      "dense_blocks": 36864.0,
+      "loaded_fraction_of_dense": 0.7222222222222222,
+      "loaded_fraction_of_all_blocks": 0.40625
+    },
+    {
+      "k": 8,
+      "loaded_blocks": 36864.0,
+      "dense_blocks": 36864.0,
+      "loaded_fraction_of_dense": 1.0,
+      "loaded_fraction_of_all_blocks": 0.5625
+    }
+  ],
+  "timing_ms": {
+    "1": {
+      "dense": 0.258459011092782,
+      "reference": 0.4041660577058792,
+      "tiled": 0.5507089663296938,
+      "compiled": 1.162916887551546,
+      "metal": 0.2531660720705986
+    },
+    "2": {
+      "dense": 0.3614998422563076,
+      "reference": 0.4464169032871723,
+      "tiled": 0.7233750075101852,
+      "compiled": 1.564666861668229,
+      "metal": 0.2026669681072235
+    },
+    "4": {
+      "dense": 0.23854197934269905,
+      "reference": 0.4000829067081213,
+      "tiled": 1.1177922133356333,
+      "compiled": 1.279416959732771,
+      "metal": 0.21374993957579136
+    },
+    "8": {
+      "dense": 0.24987501092255116,
+      "reference": 0.4064592067152262,
+      "tiled": 1.9950000569224358,
+      "compiled": 2.6084589771926403,
+      "metal": 0.20283297635614872
+    }
+  },
+  "equivalence": {
+    "1": {
+      "tiled": 2.86102294921875e-06,
+      "compiled": 2.86102294921875e-06,
+      "metal": 3.337860107421875e-06
+    },
+    "2": {
+      "tiled": 2.384185791015625e-06,
+      "compiled": 2.384185791015625e-06,
+      "metal": 5.7220458984375e-06
+    },
+    "4": {
+      "tiled": 3.814697265625e-06,
+      "compiled": 3.814697265625e-06,
+      "metal": 5.7220458984375e-06
+    },
+    "8": {
+      "tiled": 7.152557373046875e-06,
+      "compiled": 7.152557373046875e-06,
+      "metal": 8.58306884765625e-06
+    }
+  },
+  "tiled_forward_ms": {
+    "1": {
+      "median_ms": 2.5662919506430626,
+      "min_ms": 2.197250025346875,
+      "max_ms": 2.7707500848919153,
+      "iters": 10.0
+    },
+    "2": {
+      "median_ms": 3.2167499884963036,
+      "min_ms": 2.940333914011717,
+      "max_ms": 4.433292197063565,
+      "iters": 10.0
+    },
+    "4": {
+      "median_ms": 4.421875113621354,
+      "min_ms": 4.202874843031168,
+      "max_ms": 5.121042020618916,
+      "iters": 10.0
+    },
+    "8": {
+      "median_ms": 7.253583054989576,
+      "min_ms": 6.548417033627629,
+      "max_ms": 8.0251251347363,
+      "iters": 10.0
+    },
+    "dense": {
+      "median_ms": 1.2787501327693462,
+      "min_ms": 1.2359579559415579,
+      "max_ms": 1.942208968102932,
+      "iters": 10.0
+    }
+  },
+  "training_free_sweep": [
+    {
+      "k": 1,
+      "loss": 0.9036702960729599,
+      "accuracy": 0.4765625,
+      "router_recall_answer": 0.2451171875,
+      "loaded_fraction_of_dense": 0.2222222222222222
+    },
+    {
+      "k": 2,
+      "loss": 0.8655401766300201,
+      "accuracy": 0.48046875,
+      "router_recall_answer": 0.3798828125,
+      "loaded_fraction_of_dense": 0.4166666666666667
+    },
+    {
+      "k": 4,
+      "loss": 0.8468117266893387,
+      "accuracy": 0.54296875,
+      "router_recall_answer": 0.669921875,
+      "loaded_fraction_of_dense": 0.7222222222222222
+    },
+    {
+      "k": 8,
+      "loss": 0.842435896396637,
+      "accuracy": 0.5390625,
+      "router_recall_answer": 1.0,
+      "loaded_fraction_of_dense": 1.0
+    }
+  ],
+  "snr_simulation": [
+    {
+      "head_dim": 16.0,
+      "block_size": 4.0,
+      "n_blocks": 16.0,
+      "signal_cosine": 0.8,
+      "trials": 4000.0,
+      "empirical_mean_D": 0.20074221570418832,
+      "empirical_std_D": 0.16051248474431726,
+      "empirical_snr": 1.2506330334612514,
+      "measured_failure_rate": 0.547,
+      "recall_at_1": 0.45299999999999996,
+      "delta_mu_eff_from_mean": 0.8029688628167533,
+      "predicted_snr": 1.1355694559587537,
+      "predicted_failure_rate": 0.12806839904237388,
+      "snr_scale_sqrt_d_over_b": 2.0
+    },
+    {
+      "head_dim": 16.0,
+      "block_size": 8.0,
+      "n_blocks": 16.0,
+      "signal_cosine": 0.8,
+      "trials": 4000.0,
+      "empirical_mean_D": 0.09997459001288761,
+      "empirical_std_D": 0.11999846212497377,
+      "empirical_snr": 0.8331322605515389,
+      "measured_failure_rate": 0.7055,
+      "recall_at_1": 0.2945,
+      "delta_mu_eff_from_mean": 0.7997967201031009,
+      "predicted_snr": 0.7997967201031009,
+      "predicted_failure_rate": 0.21191429184056543,
+      "snr_scale_sqrt_d_over_b": 1.4142135623730951
+    },
+    {
+      "head_dim": 16.0,
+      "block_size": 16.0,
+      "n_blocks": 16.0,
+      "signal_cosine": 0.8,
+      "trials": 4000.0,
+      "empirical_mean_D": 0.051805762400670266,
+      "empirical_std_D": 0.08619854438677413,
+      "empirical_snr": 0.6010050722923702,
+      "measured_failure_rate": 0.787,
+      "recall_at_1": 0.21299999999999997,
+      "delta_mu_eff_from_mean": 0.8288921984107243,
+      "predicted_snr": 0.5861152943688483,
+      "predicted_failure_rate": 0.2788990195280996,
+      "snr_scale_sqrt_d_over_b": 1.0
+    },
+    {
+      "head_dim": 16.0,
+      "block_size": 32.0,
+      "n_blocks": 16.0,
+      "signal_cosine": 0.8,
+      "trials": 4000.0,
+      "empirical_mean_D": 0.02587915442681727,
+      "empirical_std_D": 0.060511134455788325,
+      "empirical_snr": 0.4276759088978168,
+      "measured_failure_rate": 0.8455,
+      "recall_at_1": 0.15449999999999997,
+      "delta_mu_eff_from_mean": 0.8281329416581527,
+      "predicted_snr": 0.4140664708290763,
+      "predicted_failure_rate": 0.33941271361589515,
+      "snr_scale_sqrt_d_over_b": 0.7071067811865476
+    },
+    {
+      "head_dim": 16.0,
+      "block_size": 64.0,
+      "n_blocks": 16.0,
+      "signal_cosine": 0.8,
+      "trials": 4000.0,
+      "empirical_mean_D": 0.012756223757146523,
+      "empirical_std_D": 0.04408596398996549,
+      "empirical_snr": 0.28934886759082773,
+      "measured_failure_rate": 0.88325,
+      "recall_at_1": 0.11675000000000002,
+      "delta_mu_eff_from_mean": 0.8163983204573775,
+      "predicted_snr": 0.2886403942723599,
+      "predicted_failure_rate": 0.3864282901833788,
+      "snr_scale_sqrt_d_over_b": 0.5
+    }
+  ],
+  "figures": {
+    "accuracy_vs_k": "results/accuracy_vs_k.png",
+    "selection_matrix": "results/selection_matrix.png",
+    "tile_schedule": "results/tile_schedule.png",
+    "traffic_vs_k": "results/traffic_vs_k.png",
+    "snr_scaling": "results/snr_scaling.png",
+    "snr_recall": "results/snr_recall.png"
+  },
+  "wall_clock_seconds": 577.3947112499736
+}

@@ -1,0 +1,54 @@
+[001] MoBA experiment
+[002] task: L=128 B=16 K=8 pairs=2 queries=2 noise_key=0.4 noise_value=0.0 vocab=96
+[003] model: d_model=64 heads=4 layers=3 d_ff=256 kconv=5 router_distill=0.1 train=4000 steps, batch 16, lr 0.001
+[004] parameters: 160192
+[005] --- k sweep (trained from scratch per k) ---
+[006] training 8 configurations on 4 workers: k in [1, 2, 4, 8], seeds [0, 1]
+[007]   k=1 seed=1: loss=0.8347 acc=0.4648 recall@k(last)=0.266 recall@k(first)=0.181 blocks/query=1.00 (96s)
+[008]   k=1 seed=0: loss=0.9507 acc=0.4766 recall@k(last)=0.282 recall@k(first)=0.146 blocks/query=1.00 (96s)
+[009]   k=2 seed=1: loss=0.7858 acc=0.4961 recall@k(last)=0.291 recall@k(first)=0.294 blocks/query=1.88 (125s)
+[010]   k=2 seed=0: loss=0.8130 acc=0.5078 recall@k(last)=0.237 recall@k(first)=0.314 blocks/query=1.88 (126s)
+[011]   k=4 seed=0: loss=0.7803 acc=0.4922 recall@k(last)=0.497 recall@k(first)=0.621 blocks/query=3.25 (222s)
+[012]   k=4 seed=1: loss=0.7660 acc=0.4766 recall@k(last)=0.602 recall@k(first)=0.611 blocks/query=3.25 (223s)
+[013]   k=8 seed=0: loss=0.7615 acc=0.5156 recall@k(last)=1.000 recall@k(first)=1.000 blocks/query=4.50 (282s)
+[014]   k=8 seed=1: loss=0.7794 acc=0.4844 recall@k(last)=1.000 recall@k(first)=1.000 blocks/query=4.50 (282s)
+[015] training sweep finished in 409s
+[016] dense baseline (k=K=8): loss=0.7704 acc=0.5000
+[017] --- literature check: k = K must equal dense causal attention ---
+[018] max |moba(k=K) - dense causal| over 3 batches: 1.13e-06
+[019] --- traffic (loaded blocks) ---
+[020] trained the traffic model in 123s
+[021]   traffic k=1: loaded 8192 of 36864 dense blocks (0.222 of dense)
+[022]   traffic k=2: loaded 15360 of 36864 dense blocks (0.417 of dense)
+[023]   traffic k=4: loaded 26624 of 36864 dense blocks (0.722 of dense)
+[024]   traffic k=8: loaded 36864 of 36864 dense blocks (1.000 of dense)
+[025]   k=1: 8192 loaded blocks, 0.222 of dense, 0.125 of all blocks, k/K=0.125
+[026]   k=2: 15360 loaded blocks, 0.417 of dense, 0.234 of all blocks, k/K=0.250
+[027]   k=4: 26624 loaded blocks, 0.722 of dense, 0.406 of all blocks, k/K=0.500
+[028]   k=8: 36864 loaded blocks, 1.000 of dense, 0.562 of all blocks, k/K=1.000
+[029] --- wall clock per implementation ---
+[030] training the routing model for figures and timings (4000 steps)
+[031] routing model trained in 38s
+[032]   timing k=1: dense=0.26ms, reference=0.40ms, tiled=0.55ms, compiled=1.16ms, metal=0.25ms | max|fast-ref| tiled=2.86e-06, compiled=2.86e-06, metal=3.34e-06
+[033]   timing k=2: dense=0.36ms, reference=0.45ms, tiled=0.72ms, compiled=1.56ms, metal=0.20ms | max|fast-ref| tiled=2.38e-06, compiled=2.38e-06, metal=5.72e-06
+[034]   timing k=4: dense=0.24ms, reference=0.40ms, tiled=1.12ms, compiled=1.28ms, metal=0.21ms | max|fast-ref| tiled=3.81e-06, compiled=3.81e-06, metal=5.72e-06
+[035]   timing k=8: dense=0.25ms, reference=0.41ms, tiled=2.00ms, compiled=2.61ms, metal=0.20ms | max|fast-ref| tiled=7.15e-06, compiled=7.15e-06, metal=8.58e-06
+[036]   tiled forward k=1: 2.57 ms
+[037]   tiled forward k=2: 3.22 ms
+[038]   tiled forward k=4: 4.42 ms
+[039]   tiled forward k=8: 7.25 ms
+[040]   tiled forward k=dense: 1.28 ms
+[041] --- training-free k sweep on the dense routing model ---
+[042]   k=1: loss=0.9037 acc=0.4766 recall=0.245 loaded=0.222 of dense
+[043]   k=2: loss=0.8655 acc=0.4805 recall=0.380 loaded=0.417 of dense
+[044]   k=4: loss=0.8468 acc=0.5430 recall=0.670 loaded=0.722 of dense
+[045]   k=8: loss=0.8424 acc=0.5391 recall=1.000 loaded=1.000 of dense
+[046] --- figures ---
+[047] --- SNR design principle (simulation of the paper's Section 3 model) ---
+[048]   B=4: empirical SNR=1.251 (predicted 1.136), recall@1=0.453, sqrt(d/B)=2.000
+[049]   B=8: empirical SNR=0.833 (predicted 0.800), recall@1=0.294, sqrt(d/B)=1.414
+[050]   B=16: empirical SNR=0.601 (predicted 0.586), recall@1=0.213, sqrt(d/B)=1.000
+[051]   B=32: empirical SNR=0.428 (predicted 0.414), recall@1=0.154, sqrt(d/B)=0.707
+[052]   B=64: empirical SNR=0.289 (predicted 0.289), recall@1=0.117, sqrt(d/B)=0.500
+[053] wrote results/experiment.json
+[054] total wall clock 577s
